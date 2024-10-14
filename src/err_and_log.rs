@@ -35,7 +35,7 @@ pub fn show_ico() {
     let val = random::<usize>() % 6;
     println!("\n\n{}\n", Red.paint(ICO));
     println!("{}", POST_WORDS[val]);
-    println!("🐙github地址:{}", "....");
+    println!("🐙github地址:{}", "https://github.com/dDostalker/Re_shellcode");
     println!("🐟版本:v0.1\n");
 }
 
