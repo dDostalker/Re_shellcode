@@ -35,7 +35,7 @@ pub fn show_ico() {
     let val = random::<usize>() % 6;
     println!("\n\n{}\n", Red.paint(ICO));
     println!("{}", POST_WORDS[val]);
-    println!("🐙github地址:{}", "https://github.com/dDostalker/Re_shellcode");
+    println!("🐙github地址:{}", "....");
     println!("🐟版本:v0.1\n");
 }
 
@@ -84,11 +84,11 @@ pub fn analyse_debug(
     op_str: &str,
 ) {
     let (width, high) = size().unwrap();
-    println!("{}", "\n".repeat(high as usize));
     println!("0x{:x} {} {}", instruction.address(), mnemonic, op_str);
     if run == false {
         return;
     }
+    println!("{}", "\n".repeat(high as usize));
     let mut input = String::new();
     // 创建一条与窗口宽度相等的横线
     let line: String = std::iter::repeat("-").take(width as usize).collect();
