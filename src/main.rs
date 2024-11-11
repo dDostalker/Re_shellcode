@@ -3,7 +3,7 @@ use std::process::exit;
 use Reshellcode::err_and_log::show_ico;
 use Reshellcode::match_args::*;
 use Reshellcode::match_shellcodes::get_shellcode;
-use Reshellcode::shellcode_analyse::analyse;
+use Reshellcode::shellcode_analyse::{analyse_linux, analyse_windows};
 
 fn main() {
     // 显示图标
@@ -23,6 +23,10 @@ fn main() {
             shellcode_vec = get_shellcode(init.shellcode, init.debug).unwrap();
         }
         Mode::NoSet => exit(0),
+
     }
-    analyse(shellcode_vec, init.arch, init.debug)
+    match init.system {
+        AimSystem::Linux =>analyse_linux(shellcode_vec, init.arch, init.debug),
+        AimSystem::Windows=>analyse_windows(shellcode_vec, init.arch, init.debug),
+    }
 }

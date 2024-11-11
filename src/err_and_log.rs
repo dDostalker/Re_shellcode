@@ -1,10 +1,13 @@
+use crate::sys_call::{sys_call_linux_32, sys_call_linux_64};
 use ansi_term::Color::{Blue, Green, Red, Yellow};
-use capstone::{Insn, Instructions};
+use capstone::Instructions;
 use crossterm::terminal::size;
 use rand::random;
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 use std::io;
 use std::process::exit;
+use unicorn_engine::RegisterX86::*;
+use unicorn_engine::{Unicorn};
 
 /// # 图标
 const ICO: &str = r"      ___         ___          ___          ___          ___          ___                      ___
@@ -30,12 +33,19 @@ const POST_WORDS: [&str; 6] = [
     "当这个工具不是很能分析时，不妨尝试着修改一下shellcode的格式",
 ];
 
+/// #架构常量
+const X86: usize = 8;
+const X64: usize = 16;
+
 /// # 显示图标
 pub fn show_ico() {
     let val = random::<usize>() % 6;
     println!("\n\n{}\n", Red.paint(ICO));
     println!("{}", POST_WORDS[val]);
-    println!("🐙github地址:{}", "....");
+    println!(
+        "🐙github地址:{}",
+        "https://github.com/dDostalker/Re_shellcode"
+    );
     println!("🐟版本:v0.1\n");
 }
 
@@ -51,92 +61,107 @@ where
 }
 
 /// # 打印栈信息
-/// $参数-stack数组
-pub fn print_stack(stack: &Vec<i64>) {
-    let mut buf: String = String::new();
-    let (width, _) = size().unwrap();
-    // 创建一条与窗口宽度相等的横线
-    let line1: String = std::iter::repeat("—")
-        .take(width as usize / 2 - 1)
-        .collect();
-    let line2: String = std::iter::repeat("—").take(width as usize).collect();
-    buf = buf + &line1 + "栈" + &line1 + "\n";
-    buf = buf + "--------------------\n";
-    if stack.is_empty() {
-        buf += "|        None       |\n"
-    } else {
-        for i in stack.iter().rev() {
-            buf += &format!("|0x{:0width$x}|\n", i, width = 16);
-        }
-    }
+/// $参数1-stack数组
+/// $参数2-位数
+pub fn debug_stack<T>(virtual_machine: &mut Unicorn<T>) {
+    // 判断架构从而确定输出长度
+    print_line("stack");
+    let mut i = 4;
+    let size = 24;
+        //(virtual_machine.reg_read(EBP).unwrap() - virtual_machine.reg_read(ESP).unwrap()) as usize;
+    let arg1 = virtual_machine
+        .mem_read_as_vec(virtual_machine.reg_read(ESP).unwrap(), size)
+        .unwrap();
 
-    buf = buf + "--------------------\n" + &line2;
-    println!("{}", Yellow.paint(buf));
+    while size >= i {
+        println!(
+            "0x{:0width$x}{:0width$x}{:0width$x}{:0width$x}",
+            arg1[i - 1],
+            arg1[i - 2],
+            arg1[i - 3],
+            arg1[i - 4],
+            width = 2
+        );
+        i += 4;
+    }
+}
+pub fn debug_stack_64<T>(virtual_machine: &mut Unicorn<T>) {
+    // 判断架构从而确定输出长度
+    print_line("stack");
+    let mut i = 8;
+    let size = 48;
+        //(virtual_machine.reg_read(RBP).unwrap() - virtual_machine.reg_read(RSP).unwrap()) as usize;
+    let arg1 = virtual_machine
+        .mem_read_as_vec(virtual_machine.reg_read(RBP).unwrap(), size)
+        .unwrap();
+
+    while size >= i {
+        println!(
+            "0x{:0width$x}{:0width$x}{:0width$x}{:0width$x}{:0width$x}{:0width$x}{:0width$x}{:0width$x}",
+            arg1[i - 1],
+            arg1[i - 2],
+            arg1[i - 3],
+            arg1[i - 4],
+            arg1[i - 5],
+            arg1[i - 6],
+            arg1[i - 7],
+            arg1[i - 8],
+            width = 2
+        );
+        i += 8;
+    }
+}
+fn print_line(word: &str) {
+    let (width, _) = size().unwrap();
+    let line: String = std::iter::repeat("—")
+        .take((width as usize - word.len()) / 2)
+        .collect();
+    print!("{}", Blue.paint(&line));
+    print!("{}", Yellow.paint(word));
+    println!("{}", Blue.paint(&line));
 }
 
 /// # 分析debug模式信息打印
-pub fn analyse_debug(
-    register: &[i64],
-    stack: &Vec<i64>,
-    run: bool,
-    instruction: &Insn,
-    mnemonic: &str,
-    op_str: &str,
-) {
-    let (width, high) = size().unwrap();
-    println!("0x{:x} {} {}", instruction.address(), mnemonic, op_str);
-    if run == false {
-        return;
+/// $参数1-虚拟机
+pub fn analyse_debug<T>(virtual_machine: &mut Unicorn<T>, _: u64, _: u32) {
+    print_line("register");
+    macro_rules! print_register {
+        ($($register:expr,)*) => {
+            let width = 8;
+            $(
+                println!("{}:\t0x{:0width$x}\t",
+                    stringify!($register),
+                    virtual_machine.reg_read($register).unwrap(),
+                    width = width
+                );
+            )*
+        };
     }
-    println!("{}", "\n".repeat(high as usize));
     let mut input = String::new();
-    // 创建一条与窗口宽度相等的横线
-    let line: String = std::iter::repeat("-").take(width as usize).collect();
-    // 输出横线
-    println!("{}", line);
-    println!(
-        "{}",
-        Yellow.paint(format!(
-            "rax:{}\trbx:{}\trcx:{}\trdx:{}\t",
-            register[0], register[1], register[2], register[3],
-        ))
-    );
-    println!(
-        "{}",
-        Yellow.paint(format!(
-            "rsi:{}\trdi:{}\tr8:{}\t",
-            register[6], register[7], register[8]
-        ))
-    );
-    println!(
-        "{}",
-        Yellow.paint(format!(
-            "r9:{}\tr10:{}\tr11:{}\t",
-            register[9], register[10], register[11]
-        ))
-    );
-    println!(
-        "{}",
-        Yellow.paint(format!(
-            "r12:{}\tr13:{}\tr14:{}\t",
-            register[12], register[13], register[14]
-        ))
-    );
-    println!(
-        "{}",
-        Yellow.paint(format!(
-            "r15:{}\trip:{}\trflag:{}\t",
-            register[15], register[16], register[17]
-        ))
-    );
-    println!(
-        "{}",
-        Yellow.paint(format!(
-            "rsp_offset:{}\nrbp_offset:{}",
-            register[4], register[5]
-        ))
-    );
-    print_stack(&stack);
+    print_register![EAX, EBX, ECX, EDX, ESI, EDI, ESP, EBP, EIP,];
+    debug_stack(virtual_machine);
+    print_line("aim");
+    eprint!("{}", Green.paint(">"));
+    io::stdin().read_line(&mut input).expect("无法暂停");
+}
+pub fn analyse_debug_64<T>(virtual_machine: &mut Unicorn<T>, _: u64, _: u32) {
+    print_line("register");
+    macro_rules! print_register {
+        ($($register:expr,)*) => {
+            let width = 16;
+            $(
+                println!("{}:\t0x{:0width$x}\t",
+                    stringify!($register),
+                    virtual_machine.reg_read($register).unwrap(),
+                    width = width
+                );
+            )*
+        };
+    }
+    let mut input = String::new();
+    print_register![RAX, RBX, RCX, RDX, RSI, RDI, RSP, RBP, RIP,R8,R9,R10,R11,R12,R13,R14,R15,];
+    debug_stack_64(virtual_machine);
+    print_line("aim");
     eprint!("{}", Green.paint(">"));
     io::stdin().read_line(&mut input).expect("无法暂停");
 }
@@ -158,15 +183,19 @@ pub fn print_help() {
 }
 
 /// # 打印全部指令
+/// $参数1-汇编指令列表
 pub fn print_insns(insns: &Instructions) {
-    let (width, _) = size().unwrap();
-    // 创建一条与窗口宽度相等的横线
-    let line1: String = std::iter::repeat("—")
-        .take(width as usize / 2 - 6)
-        .collect();
-    let line2: String = std::iter::repeat("—").take(width as usize).collect();
-    // 输出横线
-    println!("{}{}{0}", Blue.paint(&line1), Blue.paint("反汇编结果:"));
+    print_line("asm");
     println!("{}", insns);
-    println!("{}", Blue.paint(&line2));
+}
+
+/// # 系统调用
+pub fn debug_syscall<T>(a: &mut Unicorn<T>, _: u32) {
+    println!("{}", Green.paint("触发系统调用"));
+    sys_call_linux_32(a);
+}
+/// # 系统调用64
+pub fn debug_syscall_64<T>(a: &mut Unicorn<T>) {
+    println!("{}", Green.paint("触发系统调用"));
+    sys_call_linux_64(a);
 }

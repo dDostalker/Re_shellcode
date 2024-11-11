@@ -9,11 +9,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("test x86 linux", |b| {
         b.iter(|| {
             show_ico();
-            let mut shellcode: Vec<String> = vec![
-                "0".to_string(),
-                "-f".to_string(),
-                "".to_string(),
-            ];
+            let mut shellcode: Vec<String> =
+                vec!["0".to_string(), "-f".to_string(), "".to_string()];
             let shellcode_vec;
             // 读取参数
             let init = match match_args(&mut shellcode) {

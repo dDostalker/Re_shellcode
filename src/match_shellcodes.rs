@@ -8,7 +8,8 @@ use std::io::Error;
 /// $参数1-路径
 ///
 /// $返回值-result报错
-pub fn get_shellcode(path: String, debug_b: bool) -> Result<Vec<u8>, Error> {
+pub fn get_shellcode(path: String, _debug_b: bool) -> Result<Vec<u8>, Error> {
+
     let shellcode = fs::read_to_string(path)?
         .replace("\n", "")
         .replace("\r", "")
@@ -42,91 +43,47 @@ pub fn get_shellcode(path: String, debug_b: bool) -> Result<Vec<u8>, Error> {
     let match_vbs = Regex::new(r#"&Chr\(\d+\)"#).unwrap();
     let match_masm = Regex::new(r#"DB[0-9A-Fa-f]+h"#).unwrap();
 
+    macro_rules! regex_array {
+        ($a:expr) => {
+            for cap in $a.captures_iter(&shellcode) {
+            //eprintln!("{}", cap.get(0).unwrap().as_str());
+            // 如果16进制数据，去掉0x或\x后转化成数
+            if cap[0].starts_with("0x") || cap[0].starts_with(r"\x") {
+                let cap = cap[0]
+                    .trim_start_matches("0x")
+                    .trim_start_matches(r"\x")
+                    .trim_end_matches(",")
+                    .trim_end_matches("}");
+                let num = u8::from_str_radix(&cap, 16).unwrap();
+                shellcode_vec.push(num);
+
+                //判断字符串储存的单元大小
+            }
+            // 若正常则直接填入处理
+            else {
+                shellcode_vec.push(cap[0].parse::<u8>().unwrap());
+            }
+        }
+        };
+    }
+
+
     if match_big.is_match(&shellcode) {
         // 去掉{}以外的干扰字符
         let shellcode = match_big.captures(&shellcode).unwrap()[0].to_string();
         //eprintln!("{}", shellcode);
         // 对匹配到的每串数据进行处理
-        for cap in regex_rust_array.captures_iter(&shellcode) {
-            //eprintln!("{}", cap.get(0).unwrap().as_str());
-            // 如果16进制数据，去掉0x或\x后转化成数
-            if cap[0].starts_with("0x") || cap[0].starts_with(r"\x") {
-                let cap = cap[0]
-                    .trim_start_matches("0x")
-                    .trim_start_matches(r"\x")
-                    .trim_end_matches(",")
-                    .trim_end_matches("}");
-                let num = u8::from_str_radix(&cap, 16).unwrap();
-                shellcode_vec.push(num);
-
-                //判断字符串储存的单元大小
-            }
-            // 若正常则直接填入处理
-            else {
-                shellcode_vec.push(cap[0].parse::<u8>().unwrap());
-            }
-        }
+        regex_array!(regex_rust_array);
     } else if match_mid.is_match(&shellcode) {
         let shellcode = match_mid.captures(&shellcode).unwrap()[0].to_string();
-        for cap in regex_rust_array.captures_iter(&shellcode) {
-            //eprintln!("{}", cap.get(0).unwrap().as_str());
-            // 如果16进制数据，去掉0x或\x后转化成数
-            if cap[0].starts_with("0x") || cap[0].starts_with(r"\x") {
-                let cap = cap[0]
-                    .trim_start_matches("0x")
-                    .trim_start_matches(r"\x")
-                    .trim_end_matches(",")
-                    .trim_end_matches("}");
-                let num = u8::from_str_radix(&cap, 16).unwrap();
-                shellcode_vec.push(num);
-                //判断字符串储存的单元大小
-            }
-            // 若正常则直接填入处理
-            else {
-                shellcode_vec.push(cap[0].parse::<u8>().unwrap());
-            }
-        }
+        regex_array!(regex_rust_array);
     } else if match_vbs.is_match(&shellcode) {
-        for cap in regex_vbs_array.captures_iter(&shellcode) {
-            //eprintln!("{}", cap.get(0).unwrap().as_str());
-            // 如果16进制数据，去掉0x或\x后转化成数
-            if cap[0].starts_with("0x") || cap[0].starts_with(r"\x") {
-                let cap = cap[0]
-                    .trim_start_matches("0x")
-                    .trim_start_matches(r"\x")
-                    .trim_end_matches(",")
-                    .trim_end_matches("}");
-                let num = u8::from_str_radix(&cap, 16).unwrap();
-                shellcode_vec.push(num);
-                //判断字符串储存的单元大小
-            }
-            // 若正常则直接填入处理
-            else {
-                shellcode_vec.push(cap[0].parse::<u8>().unwrap());
-            }
-        }
+        regex_array!(regex_vbs_array);
     } else if match_little.is_match(&shellcode) {
         let shellcode = match_little.captures(&shellcode).unwrap()[0].to_string();
-        for cap in regex_rust_array.captures_iter(&shellcode) {
-            // 如果16进制数据，去掉0x或\x后转化成数
-            if cap[0].starts_with("0x") || cap[0].starts_with(r"\x") {
-                let cap = cap[0]
-                    .trim_start_matches("0x")
-                    .trim_start_matches(r"\x")
-                    .trim_end_matches(",")
-                    .trim_end_matches("}");
-                let num = u8::from_str_radix(&cap, 16).unwrap();
-                shellcode_vec.push(num);
-                //判断字符串储存的单元大小
-            }
-            // 若正常则直接填入处理
-            else {
-                shellcode_vec.push(cap[0].parse::<u8>().unwrap());
-            }
-        }
+        regex_array!(regex_rust_array)
     } else if match_str.is_match(&shellcode) {
         let shellcode = match_str.captures(&shellcode).unwrap()[0].to_string();
-
         for cap in regex_str.captures_iter(&shellcode) {
             let buf = parse_hex_string(cap[0].to_string().replace("\"", ""));
             for chr in buf {
@@ -154,9 +111,6 @@ pub fn get_shellcode(path: String, debug_b: bool) -> Result<Vec<u8>, Error> {
             shellcode_vec.push(num);
         }
     }
-    // if debug_b {
-    //     println!("{:?}", shellcode_vec);
-    // }
     Ok(shellcode_vec)
 }
 
@@ -164,6 +118,8 @@ pub fn get_shellcode(path: String, debug_b: bool) -> Result<Vec<u8>, Error> {
 /// $参数-要解析的字符串
 ///
 /// $返回值-对用ascii码数组
+///
+#[inline]
 fn parse_hex_string(s: String) -> Vec<u8> {
     let mut result: Vec<u8> = Vec::new();
     let mut i = 0;
