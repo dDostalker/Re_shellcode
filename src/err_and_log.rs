@@ -6,6 +6,8 @@ use rand::random;
 use std::fmt::Display;
 use std::io;
 use std::process::exit;
+use std::thread::sleep;
+use std::time::Duration;
 use unicorn_engine::RegisterX86::*;
 use unicorn_engine::{Unicorn};
 
@@ -46,7 +48,8 @@ pub fn show_ico() {
         "🐙github地址:{}",
         "https://github.com/dDostalker/Re_shellcode"
     );
-    println!("🐟版本:v0.1\n");
+    println!("🐟版本:v0.2.1\n");
+    sleep(Duration::from_secs(2));
 }
 
 /// # 提供match_arg
@@ -191,11 +194,11 @@ pub fn print_insns(insns: &Instructions) {
 
 /// # 系统调用
 pub fn debug_syscall<T>(a: &mut Unicorn<T>, _: u32) {
-    println!("{}", Green.paint("触发系统调用"));
+    println!("{}", Green.paint("\n触发系统调用"));
     sys_call_linux_32(a);
 }
 /// # 系统调用64
 pub fn debug_syscall_64<T>(a: &mut Unicorn<T>) {
-    println!("{}", Green.paint("触发系统调用"));
+    println!("{}", Green.paint("\n触发系统调用"));
     sys_call_linux_64(a);
 }

@@ -4,7 +4,7 @@ use crate::match_args::Arch::{x86,x64};
 use capstone::arch::BuildsCapstone;
 use capstone::{arch, Capstone, Instructions};
 use std::process::exit;
-use unicorn_engine::RegisterX86::{EBP, ESP, RBP, RSP};
+use unicorn_engine::RegisterX86::{CS, DS, EBP, ES, ESP, RBP, RSP};
 use unicorn_engine::{InsnSysX86, Permission, Unicorn};
 use crate::win_api::win_api_call;
 
@@ -72,6 +72,8 @@ pub fn analyse_linux(shellcode: Vec<u8>, arch: Arch, debug_b: bool) {
             virtual_machine
                 .reg_write(EBP, 0x8000)
                 .expect("failed write EBP");
+
+
             //是否进行debug
             if debug_b {
                 virtual_machine
@@ -90,6 +92,7 @@ pub fn analyse_linux(shellcode: Vec<u8>, arch: Arch, debug_b: bool) {
                 .reg_write(RBP, 0x8000)
                 .expect("failed write RBP");
             //是否进行debug
+
             if debug_b {
                 virtual_machine
                     .add_code_hook(0x1000, (0x1000 + shellcode.len()) as u64, analyse_debug_64)
@@ -104,7 +107,7 @@ pub fn analyse_linux(shellcode: Vec<u8>, arch: Arch, debug_b: bool) {
     }
 
     match virtual_machine.emu_start(0x1000, (0x1000 + shellcode.len()) as u64, 0, 1000) {
-        Ok(_) => (),
+        Ok(_) => {},
         Err(e) => {
             if arch == x86 {
                 eprintln!("执行器未完全执行完毕，原因是:{:?}", e);

@@ -1,9 +1,12 @@
-use crate::sys_call::sys_call_linux_32::_102_socketcall::sys_socket_call_enum::{
-    SYS_CONNECT, SYS_SOCKET,
-};
+use std::ptr::write;
+use crate::sys_call::sys_call_linux_32::_102_socketcall::sys_socket_call_enum::{SYS_ACCEPT, SYS_BIND, SYS_CONNECT, SYS_GETSOCKNAME, SYS_LISTEN, SYS_SOCKET};
+use crate::sys_call::sys_call_linux_32::_361_bind::_361_bind;
+use crate::sys_call::sys_call_linux_32::_363_listen::_363_listen;
+use crate::sys_call::sys_call_linux_32::_367_getsockname::_367_getsockname;
 use ansi_term::Color::Red;
-use unicorn_engine::RegisterX86::{EAX, EBX, ECX};
+use unicorn_engine::RegisterX86::{EAX, EBP, EBX, ECX};
 use unicorn_engine::{uc_error, Unicorn};
+
 /// 模式参数
 /**
 #define EBADF           9      /* Bad file number */
@@ -60,9 +63,13 @@ pub mod sys_socket_call_enum {
     pub const SYS_SHUTDOWN: u64 = 22;
 }
 
-/// # 102系统调用（功能未全实现）
+/// # 102_系统调用（功能未全实现）
 /// &返回
 pub fn _102_socketcall<T>(fun: &mut Unicorn<T>) -> Result<(), uc_error> {
+    let mut a0 = [0u8;4];
+    let mut a1 = [0u8;4];
+    fun.mem_read(fun.reg_read(EBP)?,&mut a0)?;
+    fun.mem_read(fun.reg_read(EBP)?+4,&mut a1)?;
     let ebx = fun.reg_read(EBX)?;
     if ebx == SYS_SOCKET {
         println!(
@@ -95,8 +102,19 @@ pub fn _102_socketcall<T>(fun: &mut Unicorn<T>) -> Result<(), uc_error> {
         );
         println!("{}", Red.paint(format!("\t端口：{}", port)));
         fun.reg_write(EAX, 1)
-    } else {
-        eprintln!("未知的参数");
+    } else if ebx == SYS_GETSOCKNAME {
+        _367_getsockname(fun)
+    } else if ebx == SYS_BIND {
+        _361_bind(fun)
+    } else if ebx == SYS_LISTEN {
+        //fun.reg_write(EBX, a0)?;
+        _363_listen(fun)
+    }
+    else if ebx == SYS_ACCEPT {
+        fun.reg_write(EAX, 1)
+    }
+    else {
+        eprintln!("未知的参数{ebx}");
         fun.reg_write(EAX, 0xFFFFFFFF)
     }
 }
