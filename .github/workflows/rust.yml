@@ -1,0 +1,43 @@
+name: Release
+permissions:
+  contents: write
+on:
+  push:
+    tags:
+      - v[0-9]+.*  #新建tag触发,比如v0.1.1
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main #分支名字
+      - uses: taiki-e/create-gh-release-action@v1
+        with:
+          changelog: CHANGELOG.md #获取更新日志,需要在changelog添加对应版本的更新日志,否则会失败
+          token: ${{ secrets.ACTION_ACCESS }} # github token
+  upload-assets:
+    needs: create-release
+    strategy:
+      matrix:
+        include: #编译的平台tager
+          - target: aarch64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-musl
+          - target: aarch64-apple-darwin
+            os: macos-11
+          - target: x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-musl
+          - target: x86_64-apple-darwin
+            os: macos-10.15
+          - target: x86_64-pc-windows-msvc
+            os: windows-2019
+    runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: Re_shellcode #项目名字
+          target: ${{ matrix.target }}
+          tar: unix
+          zip: windows
+          token: ${{ secrets.ACTION_ACCESS }}
