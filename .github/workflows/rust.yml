@@ -1,43 +1,210 @@
-name: Release
-permissions:
-  contents: write
+# GitHub Actions工作流配置文件
+
+name: Build and Release
+
 on:
   push:
     tags:
-      - v[0-9]+.*  #新建tag触发,比如v0.1.1
+      - "v*.*.*" # 当推送符合模式v*.*.*的标签时触发工作流
+
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main #分支名字
-      - uses: taiki-e/create-gh-release-action@v1
-        with:
-          changelog: CHANGELOG.md #获取更新日志,需要在changelog添加对应版本的更新日志,否则会失败
-          token: ${{ secrets.ACTION_ACCESS }} # github token
-  upload-assets:
-    needs: create-release
+  build:
+    runs-on: ${{ matrix.os }} # 定义作业运行的操作系统
     strategy:
       matrix:
-        include: #编译的平台tager
-          - target: aarch64-unknown-linux-gnu
-          - target: aarch64-unknown-linux-musl
-          - target: aarch64-apple-darwin
-            os: macos-11
-          - target: x86_64-unknown-linux-gnu
-          - target: x86_64-unknown-linux-musl
-          - target: x86_64-apple-darwin
-            os: macos-10.15
-          - target: x86_64-pc-windows-msvc
-            os: windows-2019
-    runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
+        os: [ubuntu-latest, macos-latest, windows-latest] # 定义操作系统矩阵
+        arch: [x86_64, aarch64] # 定义架构矩阵
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: taiki-e/upload-rust-binary-action@v1
+      - name: Checkout code
+        uses: actions/checkout@v2 # 检出仓库代码
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1 # 设置Rust工具链
         with:
-          bin: Re_shellcode #项目名字
-          target: ${{ matrix.target }}
-          tar: unix
-          zip: windows
-          token: ${{ secrets.ACTION_ACCESS }}
+          toolchain: stable # 使用稳定版Rust工具链
+          profile: minimal # 使用最小化配置文件
+          override: true # 覆盖任何现有的Rust工具链设置
+
+      - name: Build project
+        run: cargo build --release # 构建项目的发布版本
+
+      # 上传Linux x86_64平台的构建产物
+      - name: Upload artifact (Linux)
+        if: matrix.os == 'ubuntu-latest' && matrix.arch == 'x86_64'
+        uses: actions/upload-artifact@v2
+        with:
+          name: ubuntu-latest-heaven
+          path: target/release/heaven
+
+      # 上传Linux aarch64平台的构建产物
+      - name: Upload artifact (Linux aarch64)
+        if: matrix.os == 'ubuntu-latest' && matrix.arch == 'aarch64'
+        uses: actions/upload-artifact@v2
+        with:
+          name: ubuntu-latest-heaven-aarch64
+          path: target/release/heaven
+
+      # 上传macOS x86_64平台的构建产物
+      - name: Upload artifact (macOS)
+        if: matrix.os == 'macos-latest' && matrix.arch == 'x86_64'
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-latest-heaven
+          path: target/release/heaven
+
+      # 上传macOS aarch64平台的构建产物
+      - name: Upload artifact (macOS aarch64)
+        if: matrix.os == 'macos-latest' && matrix.arch == 'aarch64'
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-latest-heaven-aarch64
+          path: target/release/heaven
+
+      # 上传Windows x86_64平台的构建产物
+      - name: Upload artifact (Windows)
+        if: matrix.os == 'windows-latest' && matrix.arch == 'x86_64'
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-latest-heaven
+          path: target/release/heaven.exe
+
+      # 上传Windows aarch64平台的构建产物
+      - name: Upload artifact (Windows aarch64)
+        if: matrix.os == 'windows-latest' && matrix.arch == 'aarch64'
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-latest-heaven-aarch64
+          path: target/release/heaven.exe
+
+  release:
+    runs-on: ubuntu-latest # 定义作业运行在Ubuntu系统上
+    needs: build # 依赖于build作业
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2 # 检出仓库代码
+
+      # 下载Linux x86_64平台的构建产物
+      - name: Download artifact (Linux-x86_64)
+        uses: actions/download-artifact@v2
+        with:
+          name: ubuntu-latest-heaven
+          path: artifacts/ubuntu
+
+      # 下载macOS x86_64平台的构建产物
+      - name: Download artifact (macOS-x86_64)
+        uses: actions/download-artifact@v2
+        with:
+          name: macos-latest-heaven
+          path: artifacts/macos
+
+      # 下载Windows x86_64平台的构建产物
+      - name: Download artifact (Windows-x86_64)
+        uses: actions/download-artifact@v2
+        with:
+          name: windows-latest-heaven
+          path: artifacts/windows
+
+      # 下载Linux aarch64平台的构建产物
+      - name: Download artifact (Linux-aarch64)
+        uses: actions/download-artifact@v2
+        with:
+          name: ubuntu-latest-heaven-aarch64
+          path: artifacts/ubuntu
+
+      # 下载macOS aarch64平台的构建产物
+      - name: Download artifact (macOS-aarch64)
+        uses: actions/download-artifact@v2
+        with:
+          name: macos-latest-heaven-aarch64
+          path: artifacts/macos
+
+      # 下载Windows aarch64平台的构建产物
+      - name: Download artifact (Windows-aarch64)
+        uses: actions/download-artifact@v2
+        with:
+          name: windows-latest-heaven-aarch64
+          path: artifacts/windows
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1 # 创建GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # 使用GitHub令牌进行身份验证
+        with:
+          tag_name: ${{ github.ref }} # 使用推送的标签名
+          release_name: Release ${{ github.ref }} # 使用推送的标签名作为发布名称
+          body: |
+            Changes in this Release
+            - First Change
+            - Second Change # 发布说明
+          draft: false # 是否为草稿
+          prerelease: false # 是否为预发布
+
+      # 上传Linux x86_64平台的构建产物到发布页面
+      - name: Upload Linux x86_64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # 使用GitHub令牌进行身份验证
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # 使用创建发布步骤生成的上传URL
+          asset_path: artifacts/ubuntu/heaven # 上传的文件路径
+          asset_name: heaven-linux-x86_64 # 上传的文件名
+          asset_content_type: application/octet-stream # 文件内容类型
+
+      # 上传macOS x86_64平台的构建产物到发布页面
+      - name: Upload macOS x86_64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # 使用GitHub令牌进行身份验证
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # 使用创建发布步骤生成的上传URL
+          asset_path: artifacts/macos/heaven # 上传的文件路径
+          asset_name: heaven-macos-x86_64 # 上传的文件名
+          asset_content_type: application/octet-stream # 文件内容类型
+
+      # 上传Windows x86_64平台的构建产物到发布页面
+      - name: Upload Windows x86_64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # 使用GitHub令牌进行身份验证
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # 使用创建发布步骤生成的上传URL
+          asset_path: artifacts/windows/heaven.exe # 上传的文件路径
+          asset_name: heaven-windows-x86_64.exe # 上传的文件名
+          asset_content_type: application/octet-stream # 文件内容类型
+
+      # 上传Linux aarch64平台的构建产物到发布页面
+      - name: Upload Linux aarch64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # 使用GitHub令牌进行身份验证
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # 使用创建发布步骤生成的上传URL
+          asset_path: artifacts/ubuntu/heaven # 上传的文件路径
+          asset_name: heaven-linux-aarch64 # 上传的文件名
+          asset_content_type: application/octet-stream # 文件内容类型
+
+      # 上传macOS aarch64平台的构建产物到发布页面
+      - name: Upload macOS aarch64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # 使用GitHub令牌进行身份验证
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # 使用创建发布步骤生成的上传URL
+          asset_path: artifacts/macos/heaven # 上传的文件路径
+          asset_name: heaven-macos-aarch64 # 上传的文件名
+          asset_content_type: application/octet-stream # 文件内容类型
+
+      # 上传Windows aarch64平台的构建产物到发布页面
+      - name: Upload Windows aarch64 artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # 使用GitHub令牌进行身份验证
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # 使用创建发布步骤生成的上传URL
+          asset_path: artifacts/windows/heaven.exe # 上传的文件路径
+          asset_name: heaven-windows-aarch64.exe # 上传的文件名
+          asset_content_type: application/octet-stream # 文件内容类型
+
