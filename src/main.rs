@@ -1,9 +1,9 @@
 use std::env;
 use std::process::exit;
-use Reshellcode::err_and_log::show_ico;
-use Reshellcode::match_args::*;
-use Reshellcode::match_shellcodes::get_shellcode;
-use Reshellcode::shellcode_analyse::{analyse_linux, analyse_windows};
+use Re_shellcode::err_and_log::show_ico;
+use Re_shellcode::match_args::*;
+use Re_shellcode::match_shellcodes::get_shellcode;
+use Re_shellcode::shellcode_analyse::{analyse_linux, analyse_windows};
 
 fn main() {
     // 显示图标

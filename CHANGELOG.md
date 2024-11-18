@@ -30,3 +30,6 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.3.3] - 2024-11-18
 - 又又又又又又一次测试自动action构建,终于要好了吗QAQ
+
+## [0.3.4] - 2024-11-18
+- 又又又又又又又一次测试自动action构建,终于要好了吗QAQ

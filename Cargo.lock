@@ -3,14 +3,14 @@
 version = 3
 
 [[package]]
-name = "Reshellcode"
-version = "0.1.0"
+name = "Re_shellcode"
+version = "0.3.4"
 dependencies = [
  "ansi_term",
  "capstone",
  "criterion",
  "crossterm",
- "log",
+ "lazy_static",
  "rand",
  "regex",
  "unicorn-engine",
@@ -349,6 +349,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lazy_static"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+
+[[package]]
 name = "libc"
 version = "0.2.159"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -561,9 +567,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.11.0"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38200e5ee88914975b69f657f0801b6f6dccafd44fd9326302a4aaeecfacb1d8"
+checksum = "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
 dependencies = [
  "aho-corasick",
  "memchr",
