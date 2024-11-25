@@ -1,9 +1,9 @@
+use crate::Re_shell_core::err_and_log::{match_debug, print_help};
+use crate::Re_shell_core::match_args::AimSystem::{Linux, Windows};
+use crate::Re_shell_core::match_args::Arch::{x64, x86};
+use crate::Re_shell_core::match_args::Mode::*;
 use std::alloc::System;
-use crate::err_and_log::{match_debug, print_help};
-use crate::match_args::Arch::{x64, x86};
-use crate::match_args::Mode::*;
 use std::process::exit;
-use crate::match_args::AimSystem::{Linux, Windows};
 
 /// 捕获的参数
 pub struct ArgRet {
@@ -11,7 +11,7 @@ pub struct ArgRet {
     pub arch: Arch,
     pub mode: Mode,
     pub debug: bool,
-    pub system: AimSystem
+    pub system: AimSystem,
 }
 
 /// 传参模式
@@ -116,7 +116,7 @@ pub fn match_args(args: &mut Vec<String>) -> Result<ArgRet, ()> {
                     exit(1);
                 }
             };
-        }else if arg == "-s" || arg == "--system" {
+        } else if arg == "-s" || arg == "--system" {
             system = match it_arg.next() {
                 Some(arg) => {
                     if arg.starts_with('-') || (arg != "windows" && arg != "linux") {
@@ -135,13 +135,14 @@ pub fn match_args(args: &mut Vec<String>) -> Result<ArgRet, ()> {
                     exit(1);
                 }
             };
-        }  else if arg == "-b" || arg == "--debug" {
+        } else if arg == "-b" || arg == "--debug" {
             debug_b = true;
-        } else {
+        }
+        else {
             match_debug(format!("不可识别的参数{arg}"));
         }
 
-        // 迭代到下一参数
+        // 迭代到下一个参数
         arg = match it_arg.next() {
             Some(arg) => arg,
             None => break,
@@ -152,6 +153,6 @@ pub fn match_args(args: &mut Vec<String>) -> Result<ArgRet, ()> {
         arch,
         mode,
         debug: debug_b,
-        system
+        system,
     })
 }

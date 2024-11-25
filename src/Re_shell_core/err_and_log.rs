@@ -1,5 +1,5 @@
 use crate::sys_call::{sys_call_linux_32, sys_call_linux_64};
-use ansi_term::Color::{Blue, Green, Red, Yellow};
+use crate::Re_shell_core::linux_system_frame::INSNS;
 use capstone::Instructions;
 use crossterm::terminal::size;
 use rand::random;
@@ -8,8 +8,9 @@ use std::io;
 use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
+use crossterm::style::Stylize;
 use unicorn_engine::RegisterX86::*;
-use unicorn_engine::{Unicorn};
+use unicorn_engine::Unicorn;
 
 /// # 图标
 const ICO: &str = r"      ___         ___          ___          ___          ___          ___                      ___
@@ -28,28 +29,26 @@ const ICO: &str = r"      ___         ___          ___          ___          ___
 /// # 随机产生的字符串
 const POST_WORDS: [&str; 6] = [
     "🐢尝试将shellcode一键梭哈吧！",
-    "🦀🦀🦀🦀🦀蟹门🦀🦀🦀🦀🦀",
+    "🦀🦀🦀🦀🦀 蟹门 🦀🦀🦀🦀🦀",
     "为什么不试试rust scan工具呢？在网络扫描方面，它的表现将超出你的想象",
     "圣经、死灵书……还有什么来着？🤔",
     "慢不是rust的错，而是我的锅🖊",
     "当这个工具不是很能分析时，不妨尝试着修改一下shellcode的格式",
 ];
 
-/// #架构常量
-const X86: usize = 8;
-const X64: usize = 16;
+
 
 /// # 显示图标
 pub fn show_ico() {
     let val = random::<usize>() % 6;
-    println!("\n\n{}\n", Red.paint(ICO));
+    println!("\n\n{}\n", ICO.cyan());
     println!("{}", POST_WORDS[val]);
     println!(
         "🐙github地址:{}",
         "https://github.com/dDostalker/Re_shellcode"
     );
-    println!("🐟版本:v0.2.1\n");
-    sleep(Duration::from_secs(2));
+    println!("🐟版本:v0.3.5\n");
+    sleep(Duration::from_secs(1));
 }
 
 /// # 提供match_arg
@@ -71,7 +70,6 @@ pub fn debug_stack<T>(virtual_machine: &mut Unicorn<T>) {
     print_line("stack");
     let mut i = 4;
     let size = 24;
-        //(virtual_machine.reg_read(EBP).unwrap() - virtual_machine.reg_read(ESP).unwrap()) as usize;
     let arg1 = virtual_machine
         .mem_read_as_vec(virtual_machine.reg_read(ESP).unwrap(), size)
         .unwrap();
@@ -93,7 +91,7 @@ pub fn debug_stack_64<T>(virtual_machine: &mut Unicorn<T>) {
     print_line("stack");
     let mut i = 8;
     let size = 48;
-        //(virtual_machine.reg_read(RBP).unwrap() - virtual_machine.reg_read(RSP).unwrap()) as usize;
+    //(virtual_machine.reg_read(RBP).unwrap() - virtual_machine.reg_read(RSP).unwrap()) as usize;
     let arg1 = virtual_machine
         .mem_read_as_vec(virtual_machine.reg_read(RBP).unwrap(), size)
         .unwrap();
@@ -119,14 +117,17 @@ fn print_line(word: &str) {
     let line: String = std::iter::repeat("—")
         .take((width as usize - word.len()) / 2)
         .collect();
-    print!("{}", Blue.paint(&line));
-    print!("{}", Yellow.paint(word));
-    println!("{}", Blue.paint(&line));
+    print!("{}", &line.clone().blue());
+    print!("{}", word.yellow());
+    println!("{}", &line.blue());
 }
 
 /// # 分析debug模式信息打印
 /// $参数1-虚拟机
 pub fn analyse_debug<T>(virtual_machine: &mut Unicorn<T>, _: u64, _: u32) {
+    println!("{}","\n\n\n\n\n\n1".dark_blue());
+    print_line("asm");
+    println!("{}", INSNS.print());
     print_line("register");
     macro_rules! print_register {
         ($($register:expr,)*) => {
@@ -144,10 +145,15 @@ pub fn analyse_debug<T>(virtual_machine: &mut Unicorn<T>, _: u64, _: u32) {
     print_register![EAX, EBX, ECX, EDX, ESI, EDI, ESP, EBP, EIP,];
     debug_stack(virtual_machine);
     print_line("aim");
-    eprint!("{}", Green.paint(">"));
+    eprint!("{}", ">".green());
     io::stdin().read_line(&mut input).expect("无法暂停");
 }
+/// 64位debug
 pub fn analyse_debug_64<T>(virtual_machine: &mut Unicorn<T>, _: u64, _: u32) {
+
+    println!("{}","\n\n\n\n\n\n".dark_blue());
+    print_line("asm");
+    println!("{}", INSNS.print());
     print_line("register");
     macro_rules! print_register {
         ($($register:expr,)*) => {
@@ -162,10 +168,12 @@ pub fn analyse_debug_64<T>(virtual_machine: &mut Unicorn<T>, _: u64, _: u32) {
         };
     }
     let mut input = String::new();
-    print_register![RAX, RBX, RCX, RDX, RSI, RDI, RSP, RBP, RIP,R8,R9,R10,R11,R12,R13,R14,R15,];
+    print_register![
+        RAX, RBX, RCX, RDX, RSI, RDI, RSP, RBP, RIP, R8, R9, R10, R11, R12, R13, R14, R15,
+    ];
     debug_stack_64(virtual_machine);
     print_line("aim");
-    eprint!("{}", Green.paint(">"));
+    eprint!("{}", ">".green());
     io::stdin().read_line(&mut input).expect("无法暂停");
 }
 
@@ -178,9 +186,9 @@ pub fn print_help() {
     --file\t-f\t选择单文件导入程序 后跟文件路径{2}
     --arch\t-a\t设置架构
     --debug\t-b\t调试模式\n",
-        Green.paint("Re shellcode"),
-        Red.paint("*"),
-        Red.paint("!")
+        "Re shellcode".green(),
+        "*".red(),
+        "!".red()
     );
     println!("{}", help_tips);
 }
@@ -189,16 +197,25 @@ pub fn print_help() {
 /// $参数1-汇编指令列表
 pub fn print_insns(insns: &Instructions) {
     print_line("asm");
-    println!("{}", insns);
+    let binding = insns.to_string();
+    let binding = binding.split("\n").collect::<Vec<&str>>();
+    INSNS.set_length(binding.len());
+    let binding = binding.iter().map(|&s| s.to_string()).collect();
+    *INSNS.borrow_mut() = binding;
+    for i in INSNS.borrow_mut().iter_mut() {
+        println!("{}", i);
+    }
 }
 
 /// # 系统调用
 pub fn debug_syscall<T>(a: &mut Unicorn<T>, _: u32) {
-    println!("{}", Green.paint("\n触发系统调用"));
+    println!("{}", "\n触发系统调用".green());
     sys_call_linux_32(a);
 }
+
 /// # 系统调用64
 pub fn debug_syscall_64<T>(a: &mut Unicorn<T>) {
-    println!("{}", Green.paint("\n触发系统调用"));
+    println!("{}", "\n触发系统调用".green());
     sys_call_linux_64(a);
 }
+

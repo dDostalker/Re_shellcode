@@ -1,9 +1,10 @@
-use std::ptr::write;
-use crate::sys_call::sys_call_linux_32::_102_socketcall::sys_socket_call_enum::{SYS_ACCEPT, SYS_BIND, SYS_CONNECT, SYS_GETSOCKNAME, SYS_LISTEN, SYS_SOCKET};
+use crossterm::style::Stylize;
+use crate::sys_call::sys_call_linux_32::_102_socketcall::sys_socket_call_enum::{
+    SYS_ACCEPT, SYS_BIND, SYS_CONNECT, SYS_GETSOCKNAME, SYS_LISTEN, SYS_SOCKET,
+};
 use crate::sys_call::sys_call_linux_32::_361_bind::_361_bind;
 use crate::sys_call::sys_call_linux_32::_363_listen::_363_listen;
 use crate::sys_call::sys_call_linux_32::_367_getsockname::_367_getsockname;
-use ansi_term::Color::Red;
 use unicorn_engine::RegisterX86::{EAX, EBP, EBX, ECX};
 use unicorn_engine::{uc_error, Unicorn};
 
@@ -66,24 +67,20 @@ pub mod sys_socket_call_enum {
 /// # 102_系统调用（功能未全实现）
 /// &返回
 pub fn _102_socketcall<T>(fun: &mut Unicorn<T>) -> Result<(), uc_error> {
-    let mut a0 = [0u8;4];
-    let mut a1 = [0u8;4];
-    fun.mem_read(fun.reg_read(EBP)?,&mut a0)?;
-    fun.mem_read(fun.reg_read(EBP)?+4,&mut a1)?;
+    let mut a0 = [0u8; 4];
+    let mut a1 = [0u8; 4];
+    fun.mem_read(fun.reg_read(EBP)?, &mut a0)?;
+    fun.mem_read(fun.reg_read(EBP)? + 4, &mut a1)?;
     let ebx = fun.reg_read(EBX)?;
     if ebx == SYS_SOCKET {
         println!(
-            "{}",
-            format!(
-                "{}",
-                Red.paint("sys_socketcall SYS_SOCKET (值为1)：创建一个新的套接字")
-            )
+            "{}","sys_socketcall SYS_SOCKET (值为1)：创建一个新的套接字".red()
         );
         let stack = fun.mem_read_as_vec(fun.reg_read(ECX)?, 16)?;
-        println!("{}", Red.paint(format!("\t地址族:{}", stack[0])));
+        println!("{}", format!("\t地址族:{}", stack[0]).red());
 
-        println!("{}", Red.paint(format!("\t套接字类型:{}", stack[4])));
-        println!("{}", Red.paint(format!("\t协议:{}", stack[8])));
+        println!("{}", format!("\t套接字类型:{}", stack[4]).red());
+        println!("{}", format!("\t协议:{}", stack[8]).red());
         fun.reg_write(EAX, 1)
     } else if ebx == SYS_CONNECT {
         let ecx = fun.reg_read(ECX)?;
@@ -91,29 +88,26 @@ pub fn _102_socketcall<T>(fun: &mut Unicorn<T>) -> Result<(), uc_error> {
         let port = port_stack[15] as u32 | (port_stack[14] as u32) << 8;
         println!(
             "{}",
-            format!("{}", Red.paint("sys_socket_call SYS_CONNECT (值为3):链接"))
+            "sys_socket_call SYS_CONNECT (值为3):链接".red()
         );
         println!(
             "{}",
-            Red.paint(format!(
+            format!(
                 "\t地址族,ip地址为:{}.{}.{}.{}",
                 port_stack[16], port_stack[17], port_stack[18], port_stack[19]
-            ))
+            ).red()
         );
-        println!("{}", Red.paint(format!("\t端口：{}", port)));
+        println!("{}", format!("\t端口：{}", port).red());
         fun.reg_write(EAX, 1)
     } else if ebx == SYS_GETSOCKNAME {
         _367_getsockname(fun)
     } else if ebx == SYS_BIND {
         _361_bind(fun)
     } else if ebx == SYS_LISTEN {
-        //fun.reg_write(EBX, a0)?;
         _363_listen(fun)
-    }
-    else if ebx == SYS_ACCEPT {
+    } else if ebx == SYS_ACCEPT {
         fun.reg_write(EAX, 1)
-    }
-    else {
+    } else {
         eprintln!("未知的参数{ebx}");
         fun.reg_write(EAX, 0xFFFFFFFF)
     }

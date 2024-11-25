@@ -1,11 +1,11 @@
-use ansi_term::Color::Red;
+use crossterm::style::Stylize;
 use unicorn_engine::RegisterX86::{EAX, EBX, ECX, EDX};
 use unicorn_engine::{uc_error, Permission, Unicorn};
 
 pub fn _125_sys_mprotect<T>(fun: &mut Unicorn<T>) -> Result<(), uc_error> {
-    let ebx = fun.reg_read(EBX).unwrap();
-    let ecx = fun.reg_read(ECX).unwrap();
-    let edx = fun.reg_read(EDX).unwrap();
+    let ebx = fun.reg_read(EBX)?;
+    let ecx = fun.reg_read(ECX)?;
+    let edx = fun.reg_read(EDX)?;
     let mut permission = Permission::NONE;
     if edx & 1 == 1 {
         permission |= Permission::READ;
@@ -17,25 +17,24 @@ pub fn _125_sys_mprotect<T>(fun: &mut Unicorn<T>) -> Result<(), uc_error> {
         permission |= Permission::EXEC;
     }
 
-    println!("{}", format!("{}", Red.paint("sys_mprotect修改权限")));
+    println!("{}", format!("{}", "sys_mprotect修改权限".red()));
     println!(
         "{}",
         format!(
             "\t{}{}{}{}",
-            Red.paint("修改权限段:"),
-            Red.paint(ebx.to_string()),
-            Red.paint("——————"),
-            Red.paint((ebx + ecx).to_string()),
+            "修改权限段:".red(),
+            ebx,
+            "——————".red(),
+            ebx + ecx,
         )
     );
     println!(
         "{}",
-        format!("\t{}{:?}", Red.paint("权限为："), permission,)
+        format!("\t{}{:?}", "权限为：".red(), permission,)
     );
-
     match fun.mem_protect(ebx, ecx as _, permission) {
         Ok(_) => {}
-        Err(e) => {
+        Err(_) => {
             fun.reg_write(EAX, 0xFFFFFFFF)?;
         }
     }

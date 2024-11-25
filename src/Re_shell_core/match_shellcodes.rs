@@ -8,8 +8,7 @@ use std::io::Error;
 /// $参数1-路径
 ///
 /// $返回值-result报错
-pub fn get_shellcode(path: String, _debug_b: bool) -> Result<Vec<u8>, Error> {
-
+pub fn get_shellcode(path: String) -> Result<Vec<u8>, Error> {
     let shellcode = fs::read_to_string(path)?
         .replace("\n", "")
         .replace("\r", "")
@@ -46,27 +45,25 @@ pub fn get_shellcode(path: String, _debug_b: bool) -> Result<Vec<u8>, Error> {
     macro_rules! regex_array {
         ($a:expr) => {
             for cap in $a.captures_iter(&shellcode) {
-            //eprintln!("{}", cap.get(0).unwrap().as_str());
-            // 如果16进制数据，去掉0x或\x后转化成数
-            if cap[0].starts_with("0x") || cap[0].starts_with(r"\x") {
-                let cap = cap[0]
-                    .trim_start_matches("0x")
-                    .trim_start_matches(r"\x")
-                    .trim_end_matches(",")
-                    .trim_end_matches("}");
-                let num = u8::from_str_radix(&cap, 16).unwrap();
-                shellcode_vec.push(num);
-
-                //判断字符串储存的单元大小
+                //eprintln!("{}", cap.get(0).unwrap().as_str());
+                // 如果16进制数据，去掉0x或\x后转化成数
+                if cap[0].starts_with("0x") || cap[0].starts_with(r"\x") {
+                    let cap = cap[0]
+                        .trim_start_matches("0x")
+                        .trim_start_matches(r"\x")
+                        .trim_end_matches(",")
+                        .trim_end_matches("}");
+                    let num = u8::from_str_radix(&cap, 16).unwrap();
+                    shellcode_vec.push(num);
+                    //判断字符串储存的单元大小
+                }
+                // 若正常则直接填入处理
+                else {
+                    shellcode_vec.push(cap[0].parse::<u8>().unwrap());
+                }
             }
-            // 若正常则直接填入处理
-            else {
-                shellcode_vec.push(cap[0].parse::<u8>().unwrap());
-            }
-        }
         };
     }
-
 
     if match_big.is_match(&shellcode) {
         // 去掉{}以外的干扰字符
@@ -92,7 +89,6 @@ pub fn get_shellcode(path: String, _debug_b: bool) -> Result<Vec<u8>, Error> {
         }
     } else if match_str_f.is_match(&shellcode) {
         let shellcode = match_str_f.captures(&shellcode).unwrap()[0].to_string();
-
         for cap in regex_str_f.captures_iter(&shellcode) {
             let buf = parse_hex_string(cap[0].to_string().replace("\"", ""));
             for chr in buf {

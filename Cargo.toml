@@ -9,10 +9,8 @@ readme = "README.md"
 
 [dependencies]
 regex = "1.11.1"
-ansi_term = "0.12"
 rand = "0.8.5"
 capstone = "0.12.0"
-criterion = "0.5.1"
 crossterm = "0.28.1"
 unicorn-engine = "2.1.1"
 lazy_static = "1.5.0"

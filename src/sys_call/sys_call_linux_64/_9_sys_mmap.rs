@@ -1,14 +1,13 @@
-use crate::err_and_log::debug_syscall;
-use ansi_term::Color::Red;
+use crossterm::style::Stylize;
+use unicorn_engine::RegisterX86::{R8, R9, RAX, RCX, RDI, RDX, RSI};
 use unicorn_engine::{uc_error, Permission, Unicorn};
-use unicorn_engine::RegisterX86::{R9, RCX, RDI, RDX, RSI, R8, RAX};
 
 const PROT_EXEC: u64 = 1; //:页面带执行属性。
 const PROT_READ: u64 = 2; //:页面带可读属性。
 const PROT_WRITE: u64 = 4; // :页面带可写属性。
 const PROT_NONE: u64 = 0; //:页面可能不能访问
 
-pub fn _9_sys_mmap<T>(fun: &mut Unicorn<T>)->Result<(),uc_error> {
+pub fn _9_sys_mmap<T>(fun: &mut Unicorn<T>) -> Result<(), uc_error> {
     let start_addr = fun.reg_read(RDI)?;
     let length = fun.reg_read(RSI)?;
     let prot = fun.reg_read(RDX)?;
@@ -17,27 +16,30 @@ pub fn _9_sys_mmap<T>(fun: &mut Unicorn<T>)->Result<(),uc_error> {
     let offset = fun.reg_read(R9)?;
     let mut prot_fun = Permission::NONE;
 
-    println!("{}", Red.paint("\tSYS_MMAP:"));
-    println!("{}", Red.paint(format!("\t起始地址:{:x}(等于0时随机分配)", start_addr)));
-    println!("{}", Red.paint(format!("\t申请长度:{}", length)));
+    println!("{}", "\tSYS_MMAP:".red());
+    println!(
+        "{}",
+        format!("\t起始地址:{:x}(等于0时随机分配)", start_addr).red()
+    );
+    println!("{}", format!("\t申请长度:{}", length).red());
     if (prot & PROT_READ) == PROT_READ {
-        println!("{}", Red.paint("\tPROT_READ保护"));
+        println!("{}", "\tPROT_READ保护".red());
         prot_fun |= Permission::READ;
     }
     if (prot & PROT_WRITE) == PROT_WRITE {
-        println!("{}", Red.paint("\tPROT_WRITE保护"));
+        println!("{}", "\tPROT_WRITE保护".red());
         prot_fun |= Permission::WRITE;
     }
     if (prot & PROT_EXEC) == PROT_EXEC {
-        println!("{}", Red.paint("\tPROT_EXEC保护"));
+        println!("{}", "\tPROT_EXEC保护".red());
         prot_fun |= Permission::EXEC;
     }
     if prot == PROT_NONE {
-        println!("{}", Red.paint("\t无保护"));
+        println!("{}", "\t无保护".red());
     }
-    println!("{}", Red.paint(format!("\tflag:{:b}", flag)));
-    println!("{}", Red.paint(format!("\tfd:{:0x}", fd)));
-    println!("{}", Red.paint(format!("\toffset:{:x}", offset)));
-    fun.mem_map(0x10000,length as usize,prot_fun)?;
+    println!("{}", format!("\tflag:{:b}", flag).red());
+    println!("{}", format!("\tfd:{:0x}", fd).red());
+    println!("{}", format!("\toffset:{:x}", offset).red());
+    fun.mem_map(0x10000, length as usize, prot_fun)?;
     fun.reg_write(RAX, 0x10000)
 }
